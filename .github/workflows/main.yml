@@ -11,15 +11,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Extract Files
+      - name: Extract Latest Archive Cleanly
         run: |
           sudo apt-get install -y p7zip-full || true
-          if ls *.7z 1> /dev/null 2>&1; then 7z x -y *.7z; fi
-          if ls *.zip 1> /dev/null 2>&1; then unzip -o *.zip; fi
-          if [ ! -f "settings.gradle" ]; then
-            sub=$(find . -maxdepth 2 -name "settings.gradle" -exec dirname {} \;)
-            if [ -n "$sub" ] && [ "$sub" != "." ]; then cp -r "$sub"/* .; fi
+          mkdir -p _clean_extract
+          latest_archive=$(ls -t *.zip *.7z 2>/dev/null | head -n 1)
+          echo "Using latest archive: $latest_archive"
+          if [[ "$latest_archive" == *.zip ]]; then
+            unzip -o "$latest_archive" -d _clean_extract
+          elif [[ "$latest_archive" == *.7z ]]; then
+            7z x -y "$latest_archive" -o_clean_extract
           fi
+          sub=$(find _clean_extract -maxdepth 3 -name "settings.gradle" | head -n 1 | xargs dirname)
+          if [ -n "$sub" ]; then
+            cp -rf "$sub"/* .
+          fi
+          rm -rf _clean_extract
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -38,7 +45,7 @@ jobs:
       - name: Upload Ready APK
         uses: actions/upload-artifact@v4
         with:
-          name: COD-Booster-Daraa-APK
+          name: HyperBoost-GX-V2-APK
           path: |
             app/build/outputs/apk/release/app-release.apk
             app/build/outputs/apk/debug/app-debug.apk
